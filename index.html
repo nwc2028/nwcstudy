@@ -522,6 +522,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
                 speed: 0, maxSpeed: 10, accel: 0.15,
                 turnSpeed: 0.065, baseGrip: 0.08, 
                 vx: 0, vy: 0, braking: false,
+                steering: 0, yawRate: 0, grip: 0.08,
                 tier: 0 // 0 = Yellow Box, 1 = Sports Car, 2 = Supercar, 3 = F1
             };
             
@@ -545,6 +546,32 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
             }
         }
 
+        // Fixed 60 Hz handling: steering and yaw carry momentum, while tire grip
+        // changes continuously instead of snapping at the drift-score threshold.
+        function stepDriftHandling(car, input) {
+            const smooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
+            const steer=Number(!!(input.KeyD||input.ArrowRight))-Number(!!(input.KeyA||input.ArrowLeft));
+            car.steering+=(steer-car.steering)*0.24;
+            const speed=Math.abs(car.speed),turnAmount=smooth(0.5,4,speed);
+            const targetYaw=car.steering*car.turnSpeed*turnAmount*Math.sign(car.speed)/(1+Math.max(0,speed-6)*0.045);
+            car.yawRate+=(targetYaw-car.yawRate)*0.14;
+            if(speed<0.5)car.yawRate*=0.75;
+            car.angle=Math.atan2(Math.sin(car.angle+car.yawRate),Math.cos(car.angle+car.yawRate));
+            // Reverse travel uses the rear-facing heading for grip and slip calculations.
+            const travelHeading=car.angle+(car.speed<0?Math.PI:0);
+            const velocityHeading=Math.hypot(car.vx,car.vy)>0.2?Math.atan2(car.vy,car.vx):travelHeading;
+            const slip=Math.abs(Math.atan2(Math.sin(travelHeading-velocityHeading),Math.cos(travelHeading-velocityHeading)));
+            const slide=smooth(0.12,0.58,slip)*smooth(2,6,speed);
+            const targetGrip=input.Space?0.012:car.baseGrip+(0.012-car.baseGrip)*slide;
+            // Grip comes back gradually, so countersteering lets the tail swing naturally.
+            car.grip+=(targetGrip-car.grip)*(targetGrip<car.grip?0.16:0.08);
+            car.braking=car.braking||!!input.Space;
+            if(input.Space)car.speed*=0.995;
+            car.vx+=(Math.cos(car.angle)*car.speed-car.vx)*car.grip;
+            car.vy+=(Math.sin(car.angle)*car.speed-car.vy)*car.grip;
+            return slip;
+        }
+
         function updateDrift() {
             // SLOWER Top speed increase over time
             runTicks++; dfCar.maxSpeed = Math.min(15, dfCar.maxSpeed + 0.0008); 
@@ -560,27 +587,9 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
             }
             dfCar.speed = Math.max(-6, Math.min(dfCar.maxSpeed, dfCar.speed));
 
-            if (Math.abs(dfCar.speed) > 1) {
-                let steering = (dfCar.speed > 0) ? dfCar.turnSpeed : -dfCar.turnSpeed;
-                if (keys['ArrowLeft'] || keys['KeyA']) dfCar.angle -= steering;
-                if (keys['ArrowRight'] || keys['KeyD']) dfCar.angle += steering;
-            }
+            const driftAngle = stepDriftHandling(dfCar, keys);
+            const isDrifting = Math.abs(dfCar.speed) > 6 && driftAngle > 0.4;
 
-            let currentVelAngle = Math.atan2(dfCar.vy, dfCar.vx);
-            let driftAngle = Math.abs(Math.atan2(Math.sin(dfCar.angle - currentVelAngle), Math.cos(dfCar.angle - currentVelAngle))); 
-
-            let isDrifting = Math.abs(dfCar.speed) > 6 && driftAngle > 0.4;
-            
-            dfCar.braking = dfCar.braking || !!keys.Space;
-            let activeGrip = isDrifting ? dfCar.baseGrip * 0.15 : (keys.Space ? 0.012 : dfCar.baseGrip);
-            if (keys.Space) dfCar.speed *= 0.995;
-
-            let targetVx = Math.cos(dfCar.angle) * dfCar.speed;
-            let targetVy = Math.sin(dfCar.angle) * dfCar.speed;
-            
-            dfCar.vx += (targetVx - dfCar.vx) * activeGrip;
-            dfCar.vy += (targetVy - dfCar.vy) * activeGrip;
-            
             dfCar.x += dfCar.vx;
             dfCar.y += dfCar.vy;
 
