@@ -188,7 +188,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
             <div id="drift-message" role="status"></div>
             <div id="road-label">↟ PINECREST PASS <span>−8°C · FROZEN PASS</span></div>
             <button id="pause-button" aria-label="Pause game">Ⅱ</button>
-            <div id="touch-controls"><div><button data-key="ArrowLeft" aria-label="Steer left">◀</button><button data-key="ArrowRight" aria-label="Steer right">▶</button></div><div><button id="touch-upgrade" aria-label="Upgrade car">UP</button><button data-key="Space">DRIFT</button><button data-key="ArrowDown">BRAKE</button><button data-key="ArrowUp" class="gas">GAS</button></div></div>
+            <div id="touch-controls"><div><button data-key="ArrowLeft" aria-label="Steer left">◀</button><button data-key="ArrowRight" aria-label="Steer right">▶</button></div><div><button id="drift-view-button" onclick="toggleDriftView()" aria-label="Toggle third-person camera" aria-pressed="false">3D VIEW · V</button><button id="touch-upgrade" aria-label="Upgrade car">UP</button><button data-key="Space">DRIFT</button><button data-key="ArrowDown">BRAKE</button><button data-key="ArrowUp" class="gas">GAS</button></div></div>
             <div id="leaderboard-panel">
                 <!-- Content gets injected dynamically based on game -->
             </div>
@@ -499,8 +499,38 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
 
         let dfCar, dfTrack, dfCoinsArr, dfSkids, dfSmoke, dfScore, dfCoinsCount, dfTrackOffset;
         let dfCamX = 0, dfCamY = 0;
-        let dfTurnRate = 0;
-        let dfCurrentDriftPts = 0; 
+        let dfTurnRate = 0, dfTrackDistance=0;
+        function driftRoadHeading(distance) {
+            const d=Math.max(0,distance-500),ramp=Math.min(1,d/750);
+            return -Math.PI/2+ramp*(.7*Math.sin(d/850)+.22*Math.sin(d/390));
+        }
+        let dfCurrentDriftPts = 0;
+        let dfDriftCoinProgress=0, dfCoinPopups=[], dfThirdPerson=false, dfViewAngle=-Math.PI/2;
+        let dfChaseX=0,dfChaseY=0,dfChaseYaw=0,dfVisualLean=0,dfVisualLeanVelocity=0;
+        function awardDriftCoins(points) {
+            dfDriftCoinProgress+=points;
+            while(dfDriftCoinProgress>=100) {
+                dfDriftCoinProgress-=100; dfCoinsCount++;
+                dfCoinPopups.push({age:0, lane:dfCoinPopups.length%3});
+            }
+        }
+        function drawDriftCoinPopups() {
+            ctx.save();ctx.textAlign='center';ctx.font='bold 24px system-ui';
+            for(const pop of dfCoinPopups) {
+                const t=pop.age/85, x=canvas.width*.5+(pop.lane-1)*55;
+                const y=canvas.height*.58-t*85;
+                ctx.globalAlpha=Math.min(1,(1-t)*4);
+                ctx.fillStyle='#16342e';ctx.fillText('+1 coin',x+1,y+2);
+                ctx.fillStyle='#ffe087';ctx.fillText('+1 coin',x,y);
+            }
+            ctx.restore();
+        }
+        function toggleDriftView() {
+            dfThirdPerson=!dfThirdPerson;dfViewAngle=dfCar?.angle??-Math.PI/2;dfChaseX=dfCar?.x??0;dfChaseY=dfCar?.y??0;dfChaseYaw=0;
+            const button=document.getElementById('drift-view-button');
+            if(button){button.textContent=dfThirdPerson?'TOP VIEW · V':'3D VIEW · V';button.setAttribute('aria-pressed',String(dfThirdPerson));}
+            if(dfCar&&currentGame==='drift')drawDrift();
+        } 
         
         const ROAD_WIDTH = 420; 
         const NODE_DIST = 50; 
@@ -513,16 +543,16 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
 
             dfScore = 0; offroadTime = 0; runTicks = 0; 
             dfCoinsCount = 0; 
-            dfCurrentDriftPts = 0;
+            dfCurrentDriftPts = 0; dfDriftCoinProgress=0; dfCoinPopups=[]; dfViewAngle=-Math.PI/2; dfChaseX=0;dfChaseY=0;dfChaseYaw=0;dfVisualLean=0;dfVisualLeanVelocity=0;
             dfTrackOffset = 0; // Fix for static lines
             
             dfCar = { 
                 x: 0, y: 0, 
                 angle: -Math.PI / 2, 
-                speed: 0, maxSpeed: 10, accel: 0.15,
-                turnSpeed: 0.065, baseGrip: 0.08, 
+                speed: 0, maxSpeed: 10, accel: 0.12,
+                turnSpeed: 0.06, baseGrip: 0.07, 
                 vx: 0, vy: 0, braking: false,
-                steering: 0, yawRate: 0, grip: 0.08,
+                steering: 0, yawRate: 0, grip: 0.07,
                 tier: 0 // 0 = Yellow Box, 1 = Sports Car, 2 = Supercar, 3 = F1
             };
             
@@ -538,9 +568,11 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
             let currentAngle = -Math.PI / 2;
             dfTurnRate = 0;
 
-            for(let i=0; i<60; i++) {
+            for(let i=0; i<110; i++) {
                 dfTrack.push({x: curX, y: curY});
                 if (i > 10 && i % 3 === 0) dfCoinsArr.push({x:curX + Math.sin(i)*55,y:curY,r:12,wave:i});
+                currentAngle=driftRoadHeading(i*NODE_DIST);
+                dfTrackDistance=i*NODE_DIST;
                 curX += Math.cos(currentAngle) * NODE_DIST;
                 curY += Math.sin(currentAngle) * NODE_DIST;
             }
@@ -551,10 +583,10 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
         function stepDriftHandling(car, input) {
             const smooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
             const steer=Number(!!(input.KeyD||input.ArrowRight))-Number(!!(input.KeyA||input.ArrowLeft));
-            car.steering+=(steer-car.steering)*0.24;
+            car.steering+=(steer-car.steering)*0.18;
             const speed=Math.abs(car.speed),turnAmount=smooth(0.5,4,speed);
             const targetYaw=car.steering*car.turnSpeed*turnAmount*Math.sign(car.speed)/(1+Math.max(0,speed-6)*0.045);
-            car.yawRate+=(targetYaw-car.yawRate)*0.14;
+            car.yawRate+=(targetYaw-car.yawRate)*0.095;
             if(speed<0.5)car.yawRate*=0.75;
             car.angle=Math.atan2(Math.sin(car.angle+car.yawRate),Math.cos(car.angle+car.yawRate));
             // Reverse travel uses the rear-facing heading for grip and slip calculations.
@@ -564,7 +596,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
             const slide=smooth(0.12,0.58,slip)*smooth(2,6,speed);
             const targetGrip=input.Space?0.012:car.baseGrip+(0.012-car.baseGrip)*slide;
             // Grip comes back gradually, so countersteering lets the tail swing naturally.
-            car.grip+=(targetGrip-car.grip)*(targetGrip<car.grip?0.16:0.08);
+            car.grip+=(targetGrip-car.grip)*(targetGrip<car.grip?0.12:0.065);
             car.braking=car.braking||!!input.Space;
             if(input.Space)car.speed*=0.995;
             car.vx+=(Math.cos(car.angle)*car.speed-car.vx)*car.grip;
@@ -574,6 +606,9 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
 
         function updateDrift() {
             // SLOWER Top speed increase over time
+            dfCoinPopups.forEach(pop=>pop.age++);
+            dfCoinPopups=dfCoinPopups.filter(pop=>pop.age<85);
+
             runTicks++; dfCar.maxSpeed = Math.min(15, dfCar.maxSpeed + 0.0008); 
 
             dfCar.braking = false;
@@ -583,7 +618,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
                 dfCar.speed -= dfCar.accel * 1.5; 
                 dfCar.braking = true;
             } else {
-                dfCar.speed *= 0.985; 
+                dfCar.speed *= 0.990; 
             }
             dfCar.speed = Math.max(-6, Math.min(dfCar.maxSpeed, dfCar.speed));
 
@@ -592,6 +627,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
 
             dfCar.x += dfCar.vx;
             dfCar.y += dfCar.vy;
+            updateDriftChase();
 
             let bx = dfCar.x - Math.cos(dfCar.angle) * 22;
             let by = dfCar.y - Math.sin(dfCar.angle) * 22;
@@ -601,6 +637,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
             if (isDrifting) {
                 let points = driftAngle * Math.abs(dfCar.speed) * 0.5;
                 dfCurrentDriftPts += points;
+                awardDriftCoins(points);
                 
                 dfSkids.push({x: leftW.x, y: leftW.y, life: 1.0});
                 dfSkids.push({x: rightW.x, y: rightW.y, life: 1.0});
@@ -636,26 +673,9 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
             dfCamY += (targetCamY - dfCamY) * 0.15;
 
             let lastNode = dfTrack[dfTrack.length - 1];
-            while (Math.hypot(dfCar.x - lastNode.x, dfCar.y - lastNode.y) < 1500) {
-                let prevNode = dfTrack[dfTrack.length - 2];
-                let currentAngle = Math.atan2(lastNode.y - prevNode.y, lastNode.x - prevNode.x);
-
-                dfTurnRate += (Math.random() - 0.5) * 0.05;
-                dfTurnRate = Math.max(-0.08, Math.min(0.08, dfTurnRate)); 
-
-                let projectedAngle = currentAngle + dfTurnRate;
-                const minAngle = -Math.PI * 0.85; 
-                const maxAngle = -Math.PI * 0.15; 
-
-                if (projectedAngle < minAngle) {
-                    projectedAngle = minAngle;
-                    dfTurnRate += 0.03; 
-                } else if (projectedAngle > maxAngle) {
-                    projectedAngle = maxAngle;
-                    dfTurnRate -= 0.03; 
-                }
-
-                currentAngle = projectedAngle;
+            while (Math.hypot(dfCar.x - lastNode.x, dfCar.y - lastNode.y) < 4400) {
+                const currentAngle=driftRoadHeading(dfTrackDistance);
+                dfTrackDistance+=NODE_DIST;
 
                 let nextX = lastNode.x + Math.cos(currentAngle) * NODE_DIST;
                 let nextY = lastNode.y + Math.sin(currentAngle) * NODE_DIST;
@@ -709,7 +729,162 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
             }
         }
 
+        // Both views share stepDriftHandling. Only the chase camera and body suspension
+        // are filtered here, keeping countersteering responsive while the view settles.
+        function updateDriftChase() {
+            const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
+            const moving=Math.hypot(dfCar.vx,dfCar.vy)>.6;
+            const travel=moving?Math.atan2(dfCar.vy,dfCar.vx):dfCar.angle;
+            const target=dfCar.angle+wrap(travel-dfCar.angle)*.3;
+            dfChaseYaw=(dfChaseYaw+wrap(target-dfViewAngle)*.012)*.8;
+            dfViewAngle=wrap(dfViewAngle+dfChaseYaw);
+            dfChaseX+=(dfCar.x-dfChaseX)*.22;dfChaseY+=(dfCar.y-dfChaseY)*.22;
+            const lean=Math.max(-.055,Math.min(.055,dfCar.yawRate*Math.abs(dfCar.speed)*.14));
+            dfVisualLeanVelocity=(dfVisualLeanVelocity+(lean-dfVisualLean)*.12)*.7;
+            dfVisualLean+=dfVisualLeanVelocity;
+        }
+        function drawDriftCar3D(face) {
+            const car=dfCar,tier=car.tier;
+            const colors=[['#ffda6b','#d8aa35','#ebbd49'],['#58b5f0','#24639b','#398ccc'],['#ff6f76','#a72b45','#db435d'],['#ff6358','#b0232e','#df3640']][tier];
+            const dark=['#23313d','#101b26','#172431'];
+            const c=Math.cos(car.angle),s=Math.sin(car.angle);
+            const p=(x,y,z)=>({x:car.x+c*x-s*y,y:car.y+s*x+c*y,z:z+y*dfVisualLean});
+            // Cross-sections define sloped hoods, tapered noses, and raked windshields.
+            function hull(sections,bottom,palette) {
+                for(let i=0;i<sections.length-1;i++) {
+                    const [x,a,z]=sections[i],[X,b,Z]=sections[i+1];
+                    face([p(x,-a,z),p(X,-b,Z),p(X,b,Z),p(x,a,z)],palette[0]);
+                    for(const side of [-1,1])face([p(x,a*side,bottom),p(X,b*side,bottom),p(X,b*side,Z),p(x,a*side,z)],palette[1]);
+                }
+                for(const [x,a,z] of [sections[0],sections[sections.length-1]])face([p(x,-a,bottom),p(x,a,bottom),p(x,a,z),p(x,-a,z)],palette[2]);
+            }
+            function block(x,y,z,l,w,height,palette) {
+                const v=[p(x-l/2,y-w/2,z),p(x+l/2,y-w/2,z),p(x+l/2,y+w/2,z),p(x-l/2,y+w/2,z)];
+                const top=[p(x-l/2,y-w/2,z+height),p(x+l/2,y-w/2,z+height),p(x+l/2,y+w/2,z+height),p(x-l/2,y+w/2,z+height)];
+                face(top,palette[0]);for(let i=0;i<4;i++)face([v[i],v[(i+1)%4],top[(i+1)%4],top[i]],palette[i%2+1]);
+            }
+            const width=[14,16,18,21][tier],wheelX=[19,21,23,24][tier];
+            // Round tires and contrasting rims; front wheels turn with the steering input.
+            for(const x of [-wheelX,wheelX])for(const side of [-1,1]) {
+                const steer=x>0?car.steering*.38:0,cs=Math.cos(steer),sn=Math.sin(steer),radius=tier===3?7:6;
+                const wheel=(a,b,z)=>p(x+a*cs-b*sn,side*width+a*sn+b*cs,z);
+                const ring=(offset,r)=>Array.from({length:12},(_,i)=>wheel(Math.cos(i*Math.PI/6)*r,offset,7+Math.sin(i*Math.PI/6)*r));
+                const a=ring(-3,radius),b=ring(3,radius);
+                for(let i=0;i<12;i++)face([a[i],a[(i+1)%12],b[(i+1)%12],b[i]],i<6?'#25303a':'#111923');
+                face(side<0?a:b,'#131c24');face(ring(side*3.15,radius*.56),'#b8c9d6');face(ring(side*3.25,2),'#455967');
+            }
+            if(tier<3) {
+                const length=[29,33,36][tier],half=[14,16,18][tier],deck=[14,11,9][tier],roof=[24,19,16][tier];
+                hull([[-length,half-2,deck-1],[-length+7,half,deck],[14,half,deck],[length,half-3,deck-3]],5,colors);
+                hull([[-20,half-3,deck],[-10,half-4,roof],[5,half-4,roof],[17,half-3,deck]],deck,['#365264','#243d50','#456779']);
+                hull([[-10,half-4,roof+.3],[5,half-4,roof+.3]],roof,colors);
+                block(-length,0,5,3,half*2-3,3,dark); // rear diffuser
+                for(const side of [-1,1]){
+                    block(-length-1,side*(half-4),deck-3,1.5,tier===2?10:7,2,car.braking?['#ff9a84','#ff3737','#ff5c45']:['#ed6b65','#af2939','#dc4554']);
+                    block(length-1,side*(half-5),deck-4,2,7,2,['#edfbff','#c0e9ff','#ffffff']);
+                    block(-length,side*(half-5),4,4,3,2,['#788d9e','#26323d','#9babb7']);
+                }
+                if(tier>=1){
+                    for(const side of [-1,1])block(-length+5,side*(half-5),deck,2,2,6,dark);
+                    block(-length+4,0,deck+6,7,half*2+5,1.5,tier===2?dark:colors);
+                    block(12,0,deck+.3,13,3,.5,dark);
+                }
+                if(tier===2)for(const side of [-1,1])block(-17,side*10,deck+.4,10,4,.5,dark);
+            } else {
+                // Open-wheel formula car: narrow nose, exposed cockpit, sidepods and wings.
+                hull([[-32,7,9],[-15,10,12],[2,7,11],[35,3,6]],4,colors);
+                for(const side of [-1,1]){
+                    block(-8,side*12,4,28,9,6,colors);
+                    block(-23,side*10,8,3,2,8,dark);
+                    block(24,side*10,6,3,15,1,dark);
+                }
+                block(-28,0,16,9,39,2,dark);block(31,0,3,9,36,2,colors);
+                block(-4,0,12,13,9,1,dark);block(-7,0,13,5,5,2,['#f2df99','#d5ba68','#ead48e']);
+                block(-13,0,12,2,11,5,dark);
+                block(-33,0,7,2,4,3,car.braking?['#ff8877','#ff3333','#ff6666']:['#a6363d','#8c2632','#be3e47']);
+            }
+        }
+
+        // Perspective projection of the same track and vehicle positions used by the simulation.
+        // Ground polygons are clipped at the camera; solid scenery and car faces use depth sorting.
+        function drawDriftThirdPerson() {
+            const w=canvas.width,h=canvas.height,focal=h*.92,horizon=h*.34;
+            const heading=dfViewAngle,fx=Math.cos(heading),fy=Math.sin(heading),rx=-fy,ry=fx;
+            const camX=dfChaseX-fx*260,camY=dfChaseY-fy*260,camZ=150;
+            const pitch=.24,cp=Math.cos(pitch),sp=Math.sin(pitch);
+            const camera=p=>{const dx=p.x-camX,dy=p.y-camY,forward=dx*fx+dy*fy,down=camZ-(p.z||0);return {x:dx*rx+dy*ry,y:down*cp-forward*sp,z:forward*cp+down*sp};};
+            const screen=p=>({x:w/2+p.x*focal/p.z,y:horizon+p.y*focal/p.z});
+            const project=p=>{const v=camera(p);return v.z>20?{...screen(v),scale:focal/v.z,depth:v.z}:null;};
+            const fogAmount=depth=>{const t=Math.max(0,Math.min(1,(depth-1000)/2100));return t*t*(3-2*t);};
+            const fogColor=(color,depth)=>{
+                const fog=fogAmount(depth),hex=color.slice(1),rgb=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16));
+                return 'rgb('+rgb.map((v,i)=>Math.round(v+([218,231,236][i]-v)*fog)).join(',')+')';
+            };
+            function polygon(points,color) {
+                color=fogColor(color,points.reduce((sum,p)=>sum+camera(p).z,0)/points.length);
+                let verts=points.map(camera),clipped=[];
+                for(let i=0;i<verts.length;i++) {
+                    const a=verts[i],b=verts[(i+1)%verts.length];
+                    if(a.z>=20)clipped.push(a);
+                    if((a.z>=20)!==(b.z>=20)) {const t=(20-a.z)/(b.z-a.z);clipped.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:20});}
+                }
+                if(clipped.length<3)return;
+                ctx.fillStyle=color;ctx.beginPath();clipped.map(screen).forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=.65;ctx.stroke();
+            }
+            const sky=ctx.createLinearGradient(0,0,0,h*.6);sky.addColorStop(0,'#7198b5');sky.addColorStop(1,'#e7eff2');ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
+            // Distant peaks turn slowly with the chase camera.
+            for(let layer=0;layer<2;layer++) {
+                ctx.fillStyle=layer?'#b4cbd4':'#96b4c5';ctx.beginPath();ctx.moveTo(0,h*.49);
+                for(let i=-2;i<12;i++){const x=i*w/8-Math.sin(heading)*w*.13;ctx.lineTo(x,h*(.31+layer*.05)-Math.sin(i*2.7+layer)*h*.075);}
+                ctx.lineTo(w,h*.56);ctx.lineTo(0,h*.56);ctx.fill();
+            }
+            ctx.fillStyle='#dae7ec';ctx.fillRect(0,horizon+focal*(-sp/cp),w,h);
+            const edges=dfTrack.map((p,i)=>{const a=dfTrack[Math.max(0,i-1)],b=dfTrack[Math.min(dfTrack.length-1,i+1)],len=Math.hypot(b.x-a.x,b.y-a.y)||1;return {p,nx:-(b.y-a.y)/len,ny:(b.x-a.x)/len};});
+            const segments=[];
+            for(let i=0;i<edges.length-1;i++)segments.push({i,depth:(camera(edges[i].p).z+camera(edges[i+1].p).z)/2});
+            segments.sort((a,b)=>b.depth-a.depth);
+            const at=(e,offset,z=0)=>({x:e.p.x+e.nx*offset,y:e.p.y+e.ny*offset,z});
+            for(const {i,depth} of segments){if(depth<0||depth>4000)continue;const a=edges[i],b=edges[i+1];
+                for(const [width,color] of [[ROAD_WIDTH/2+24,'#f5f9fa'],[ROAD_WIDTH/2+13,(i+Math.round(dfTrackOffset/NODE_DIST))%2?'#f9f6ed':'#bb7156'],[ROAD_WIDTH/2,'#66818e'],[2,'#e7ce89']])
+                    polygon([at(a,-width),at(a,width),at(b,width),at(b,-width)],color);
+            }
+            for(const skid of dfSkids){const p=project(skid);if(!p||p.depth>1900)continue;ctx.globalAlpha=skid.life*.6;ctx.fillStyle='#243640';ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(.3,6*p.scale),Math.max(.3,2*p.scale),0,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+            const objects=[];
+            function face(points,color){objects.push({depth:points.reduce((s,p)=>s+camera(p).z,0)/points.length,draw:()=>polygon(points,color)});}
+            function box(x,y,z,length,width,height,angle,colors){
+                const c=Math.cos(angle),s=Math.sin(angle),p=(a,b,d)=>({x:x+c*a-s*b,y:y+s*a+c*b,z:z+d});
+                const a=p(-length/2,-width/2,0),b=p(length/2,-width/2,0),c1=p(length/2,width/2,0),d=p(-length/2,width/2,0);
+                const A={...a,z:z+height},B={...b,z:z+height},C={...c1,z:z+height},D={...d,z:z+height};
+                face([a,b,B,A],colors[1]);face([b,c1,C,B],colors[2]);face([c1,d,D,C],colors[1]);face([d,a,A,D],colors[2]);face([A,B,C,D],colors[0]);
+            }
+            // Reuse the top-down world's deterministic positions and scenery types.
+            const cell=112,range=1500;
+            for(let gy=Math.floor((dfCar.y-range)/cell);gy<=Math.ceil((dfCar.y+range)/cell);gy++)for(let gx=Math.floor((dfCar.x-range)/cell);gx<=Math.ceil((dfCar.x+range)/cell);gx++) {
+                const x=gx*cell+noise(gx,gy,1)*85,y=gy*cell+noise(gx,gy,2)*85,p=project({x,y});
+                if(!p||p.depth>2100||p.x<-180||p.x>w+180||roadDistance(x,y)<ROAD_WIDTH/2+76)continue;
+                const n=noise(gx,gy,3),scale=.7+noise(gx,gy,6)*.5;
+                if(n<.56) {
+                    const tall=(n<.43?110:135)*scale;
+                    box(x,y,0,9,9,tall*.65,0,['#e0d7c5','#766b60','#a89b87']);
+                    for(let level=0;level<3;level++){
+                        const z=20+level*tall*.21,r=(38-level*8)*scale,top={x,y,z:z+tall*.48};
+                        for(let k=0;k<6;k++){const a=k*Math.PI/3,b=(k+1)*Math.PI/3;face([{x:x+Math.cos(a)*r,y:y+Math.sin(a)*r,z},{x:x+Math.cos(b)*r,y:y+Math.sin(b)*r,z},top],k%2?'#f2f7f7':'#bbd4d5');}
+                    }
+                } else if(n<.75)box(x,y,0,32*scale,25*scale,18*scale,.4,['#f4f8f9','#9faeae','#84989c']);
+                else {
+                    const type=n>.975?'deer':n>.953?'fox':n>.93?'rabbit':n<.88?'fern':'bush';
+                    if(n>.93){box(x,y,8, type==='deer'?28:19,10,type==='deer'?18:9,.5,['#d6b78f','#a9835d','#c49b6d']);box(x+12,y,16,8,8,12,.5,['#ddc6a5','#ad8764','#c49b6d']);}
+                    else objects.push({depth:p.depth,draw:()=>{ctx.globalAlpha=1-fogAmount(p.depth);ctx.drawImage(getSprite(type,Math.floor(noise(gx,gy,4)*3)),p.x-40*p.scale,p.y-50*p.scale,80*p.scale,65*p.scale);ctx.globalAlpha=1;}});
+                }
+            }
+            for(const coin of dfCoinsArr){const p=project({...coin,z:18+Math.sin(coin.wave)*5});if(!p||p.depth>2400)continue;objects.push({depth:p.depth,draw:()=>{ctx.globalAlpha=1-fogAmount(p.depth);ctx.fillStyle='#ffd354';ctx.strokeStyle='#fff3b4';ctx.lineWidth=Math.max(1,2*p.scale);ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(1,9*p.scale),Math.max(1,12*p.scale),0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.globalAlpha=1;}});}
+            drawDriftCar3D(face);
+            for(const smoke of dfSmoke){const p=project({...smoke,z:7});if(p)objects.push({depth:p.depth,draw:()=>{ctx.globalAlpha=smoke.life*.3;ctx.fillStyle='#edf3f5';ctx.beginPath();ctx.arc(p.x,p.y,smoke.r*p.scale,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}});}
+            objects.sort((a,b)=>b.depth-a.depth).forEach(o=>{if(o.depth>20)o.draw();});
+        }
+
         function drawDrift() {
+            if(dfThirdPerson){drawDriftThirdPerson();drawDriftCoinPopups();updateDriftHUD();return;}
             ctx.fillStyle = '#d9e7ed'; 
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             drawMeadow();
@@ -865,6 +1040,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
 
             ctx.restore();
 
+            drawDriftCoinPopups();
             updateDriftHUD();
         }
 
@@ -1121,7 +1297,7 @@ updateSidebarUI=function(game) {
     document.getElementById('game-container').classList.toggle('is-zombies',game==='zombies');
     paused=false;document.getElementById('pause-button').textContent='Ⅱ';document.getElementById('pause-button').setAttribute('aria-label','Pause game');
     if(game!=='drift') {oldSidebar(game);resizeCanvas();document.getElementById('overlay-title').textContent='Mutant Raid';document.getElementById('overlay-title').style.color='';document.getElementById('overlay-desc').innerHTML='WASD to move · Click to shoot<br>Survive the endless waves.';startButton.textContent='Start a raid';overlay.style.display='flex';return;}
-    document.getElementById('leaderboard-panel').innerHTML=`<div class="eyebrow">THE MOUNTAIN IS CALLING</div><h3 class="garage-title">Your garage.</h3><p class="garage-copy">Find your rhythm. Follow the bends.<br>Trade trail coins for a fresh set of wheels.</p>${carNames.map((name,i)=>`<div class="garage-car"><span class="car-swatch" style="background:${['#e9bc47','#5598c5','#c96d5a','#e84848'][i]}"></span><div><b>${name}</b><small>${i?upgradeCosts[i-1]+' coins':'Your first adventure'}</small></div><span class="owned"></span></div>`).join('')}<button id="upgrade-button" disabled>Collect coins to upgrade</button><div class="best-row"><span>PERSONAL BEST</span><b id="best-score">${bestScore.toLocaleString()}</b></div><div class="controls-note"><kbd>W ↑</kbd> Accelerate &nbsp; <kbd>S ↓</kbd> Brake<br><kbd>A D / ← →</kbd> Steer<br><kbd>Space</kbd> Handbrake · <kbd>C</kbd> Upgrade<br><kbd>P / Esc</kbd> Pause<br><br>Fresh snow. Frozen asphalt.<br>Keep clear of the snowbanks.</div>`;
+    document.getElementById('leaderboard-panel').innerHTML=`<div class="eyebrow">THE MOUNTAIN IS CALLING</div><h3 class="garage-title">Your garage.</h3><p class="garage-copy">Find your rhythm. Follow the bends.<br>Trade trail coins for a fresh set of wheels.</p>${carNames.map((name,i)=>`<div class="garage-car"><span class="car-swatch" style="background:${['#e9bc47','#5598c5','#c96d5a','#e84848'][i]}"></span><div><b>${name}</b><small>${i?upgradeCosts[i-1]+' coins':'Your first adventure'}</small></div><span class="owned"></span></div>`).join('')}<button id="upgrade-button" disabled>Collect coins to upgrade</button><div class="best-row"><span>PERSONAL BEST</span><b id="best-score">${bestScore.toLocaleString()}</b></div><div class="controls-note"><kbd>W ↑</kbd> Accelerate &nbsp; <kbd>S ↓</kbd> Brake<br><kbd>A D / ← →</kbd> Steer<br><kbd>Space</kbd> Handbrake · <kbd>C</kbd> Upgrade<br><kbd>V</kbd> Change camera<br><kbd>P / Esc</kbd> Pause<br><br>Fresh snow. Frozen asphalt.<br>Keep clear of the snowbanks.</div>`;
     document.getElementById('upgrade-button').onclick=()=>{if(isPlaying&&!paused&&dfCar.tier<3&&dfCoinsCount>=upgradeCosts[dfCar.tier]) {dfCoinsCount-=upgradeCosts[dfCar.tier];dfCar.tier++;updateDriftHUD();}};
     resizeCanvas();resetDrift();
     requestAnimationFrame(()=>{if(!isPlaying&&currentGame==='drift'){drawDrift();showWelcome();}});
@@ -1129,7 +1305,7 @@ updateSidebarUI=function(game) {
 function showWelcome() {
     document.getElementById('overlay-title').textContent='Take the winter slide.';
     document.getElementById('overlay-title').style.color='';
-    document.getElementById('overlay-desc').innerHTML='Welcome to Pinecrest Pass. Snow-covered pines, frozen asphalt, and just one more run.<br><br><b>WASD / arrows</b> to drive · <b>Space</b> to drift<br>Ice keeps you sliding. Save coins for your next ride.';
+    document.getElementById('overlay-desc').innerHTML='Welcome to Pinecrest Pass. Snow-covered pines, frozen asphalt, and just one more run.<br><br><b>WASD / arrows</b> to drive · <b>Space</b> to drift<br><b>V</b> switches top-down / 3D chase camera.<br>Every 100 drift points earns +1 coin.';
     startButton.textContent='Hit the mountain ↗';overlay.style.display='flex';
 }
 function togglePause() {
@@ -1148,6 +1324,7 @@ document.getElementById('touch-upgrade').onclick=()=>document.getElementById('up
 window.addEventListener('keydown',e=>{
     if(arcadePortal.style.display!=='flex'||e.target.matches('input,textarea'))return;
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
+    if(!e.repeat&&e.code==='KeyV'&&currentGame==='drift'){e.preventDefault();toggleDriftView();}
     if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();
     if(!e.repeat&&e.code==='Enter'&&e.target.tagName!=='BUTTON'&&(!isPlaying||paused))startButton.click();
 });
