@@ -1323,7 +1323,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
             ctx.lineWidth = ROAD_WIDTH + 46; ctx.strokeStyle = roadMix('#f1f7f8','#7c36a8','#d6a05d'); ctx.beginPath();
             dfTrack.forEach((p,i) => i ? ctx.lineTo(p.x-dfCamX,p.y-dfCamY) : ctx.moveTo(p.x-dfCamX,p.y-dfCamY)); ctx.stroke();
             ctx.lineWidth = ROAD_WIDTH + 26; 
-            ctx.strokeStyle = roadMix('#777b78','#111426','#756047'); 
+            ctx.strokeStyle = roadMix('#777b78','#111426','#756047');
             ctx.beginPath();
             dfTrack.forEach((p, i) => i===0 ? ctx.moveTo(p.x - dfCamX, p.y - dfCamY) : ctx.lineTo(p.x - dfCamX, p.y - dfCamY));
             ctx.stroke();
