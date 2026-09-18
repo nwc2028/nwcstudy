@@ -25,6 +25,12 @@ jobs:
           from pathlib import Path
           path = Path("index.html")
           source = path.read_text()
+          source = source.replace("                dfCurrentDriftPts += points;", chr(10).join(["                dfCurrentDriftPts += points;", "                // Bank drift score every physics step so the HUD cannot fall at drift end.", "                dfScore += points;"]))
+          source = source.replace("                    dfScore += dfCurrentDriftPts;" + chr(10), "")
+          source = source.replace("                    dfCurrentDriftPts = 0;", chr(10).join(["                    dfCurrentDriftPts = 0;", "                    // A new slide starts a fresh 100-point coin counter.", "                    dfDriftCoinProgress = 0;"]))
+          source = source.replace('gameOver(dfScore + dfCurrentDriftPts, "A little too wild.")', 'gameOver(dfScore, "A little too wild.")')
+          source = source.replace("                    dfScore += 100; " + chr(10), "")
+          source = source.replace("Math.floor(dfScore+dfCurrentDriftPts).toLocaleString()", "Math.floor(dfScore).toLocaleString()")
           repairs = [
             ["        // Chromebooks usually have modest integrated graphics. Keep their simulation at", "        // full speed, but lower the pixels and frame rate the renderer has to fill.", "        const browserNavigator = typeof navigator === 'undefined' ? {} : navigator;", "        const lowPowerDevice = /CrOS/i.test(browserNavigator.userAgent || '') || (browserNavigator.deviceMemory && browserNavigator.deviceMemory <= 4) || (browserNavigator.hardwareConcurrency && browserNavigator.hardwareConcurrency <= 4);", "        function resizeCanvas() {"],
             ["                const pixelBudget = lowPowerDevice ? 540000 : 900000;", "                const scale = Math.min(preferred, 1280 / w, Math.sqrt(pixelBudget / (w * h)));"],
