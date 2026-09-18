@@ -5,6 +5,8 @@
   const canvas = $('canvas'), ctx = canvas.getContext('2d', { alpha: false });
   const keys = new Set(), coarse = matchMedia('(pointer:coarse)');
   const reducedMotion = matchMedia('(prefers-reduced-motion:reduce)');
+  const browserNavigator = typeof navigator === 'undefined' ? {} : navigator;
+  const lowPowerDevice = /CrOS/i.test(browserNavigator.userAgent || '') || (browserNavigator.deviceMemory && browserNavigator.deviceMemory <= 4) || (browserNavigator.hardwareConcurrency && browserNavigator.hardwareConcurrency <= 4);
   const input = { x: 0, y: 0, aimX: 850, aimY: 445, fire: false };
   let state = core.createState(), screen = 'title', paused = false, lastTime = 0, playground = false;
   let bestDay = 0, stickX = 0, stickY = 0, stickPointer = null, aimPointer = null, touchFiring = false;
@@ -249,7 +251,7 @@
     oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
   }
 
-  let hudTimer = 0;
+  let hudTimer = 0, lastRender = 0;
   function frame(now) {
     const dt = Math.min(.05, Math.max(0, (now - (lastTime || now)) / 1000)); lastTime = now;
     if (!document.hidden) {
@@ -277,8 +279,11 @@
         else if (state.mode === 'dead') { recordBest(); showEnding(); }
         hudTimer += dt; if (hudTimer > .08) { updateHUD(); hudTimer = 0; }
       }
-      const view = viewTransform();
-      renderer.draw(ctx, state, { width: 1120, height: 600, aimX: input.aimX, aimY: input.aimY, menu: screen === 'title', reducedMotion: reducedMotion.matches, zoom: view.zoom, cameraX: view.x, cameraY: view.y });
+      if (!lowPowerDevice || now - lastRender >= 1000 / 30) {
+        const view = viewTransform();
+        renderer.draw(ctx, state, { width: 1120, height: 600, aimX: input.aimX, aimY: input.aimY, menu: screen === 'title', reducedMotion: reducedMotion.matches, zoom: view.zoom, cameraX: view.x, cameraY: view.y });
+        lastRender = now;
+      }
     }
     requestAnimationFrame(frame);
   }
