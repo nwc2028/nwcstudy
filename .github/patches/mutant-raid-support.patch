@@ -2,24 +2,6 @@ diff --git a/index.html b/index.html
 index a5a29a2..4ee57c7 100644
 --- a/index.html
 +++ b/index.html
-@@ -786,8 +786,6 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
-                 dfCurrentDriftPts += points;
-                 // Bank drift score every physics step so the HUD cannot fall at drift end.
-                 dfScore += points;
--                // Bank drift score every physics step so the HUD cannot fall at drift end.
--                dfScore += points;
-                 awardDriftCoins(points);
-                 
-                 dfSkids.push({x: leftW.x, y: leftW.y, life: 1.0});
-@@ -812,8 +810,6 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
-                     dfCurrentDriftPts = 0;
-                     // A new slide starts a fresh 100-point coin counter.
-                     dfDriftCoinProgress = 0;
--                    // A new slide starts a fresh 100-point coin counter.
--                    dfDriftCoinProgress = 0;
-                 }
-                 if (Math.abs(dfCar.speed) > 6 && driftAngle > 0.15 && Math.random() > 0.5) {
-                     dfSkids.push({x: leftW.x, y: leftW.y, life: 0.3});
 @@ -1552,7 +1548,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
          let zmPlayer, zmZombies, zmBullets, zmScore, zmFrame, zmBuildings, zmPowerups, camera, activePowerup;
          
