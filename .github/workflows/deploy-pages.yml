@@ -22,7 +22,7 @@ jobs:
       - name: Apply staged Mutant Raid update
         run: |
           if [ -f .github/patches/mutant-raid-support.patch ]; then
-            git apply .github/patches/mutant-raid-support.patch
+            git apply --ignore-space-change .github/patches/mutant-raid-support.patch
             git rm .github/patches/mutant-raid-support.patch
           fi
       - name: Repair and save Chromebook-friendly game rendering
