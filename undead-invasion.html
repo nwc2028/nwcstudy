@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050606">
+  <meta name="description" content="Defend the orphanage against an endless pixel-art undead invasion.">
+  <meta property="og:title" content="Undead Invasion">
+  <meta property="og:description" content="Hold the line. Survive the night.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Undead Invasion">
+  <meta name="twitter:description" content="Hold the line. Survive the night.">
+  <title>Undead Invasion</title>
+  <link rel="stylesheet" href="undead-invasion.css">
+</head>
+<body>
+  <main class="game-shell">
+    <header class="topbar">
+      <a class="back-link" href="index.html#drift" aria-label="Back to Alpine Arcade">← ARCADE</a>
+      <span class="brand-mark"><b>UNDEAD</b><i>INVASION</i></span>
+      <button id="sound-button" class="icon-button" type="button" aria-label="Toggle sound">♪</button>
+    </header>
+
+    <section id="game-frame" class="game-frame" aria-label="Undead Invasion game">
+      <canvas id="undead-canvas" width="960" height="540" aria-label="Pixel-art zombie defense game"></canvas>
+
+      <div id="main-menu" class="screen menu-screen">
+        <h1><span>Undead</span> Invasion</h1>
+        <div class="mode-row">
+          <button class="pixel-button danger" type="button" data-start="defense">New Defense</button>
+          <button class="pixel-button amber" type="button" data-start="playground">Playground</button>
+        </div>
+        <p class="profile">SURVIVOR_01 <span>▰</span></p>
+        <div class="menu-footer"><button type="button" data-panel="controls">Controls</button><button type="button" data-panel="about">About</button></div>
+      </div>
+
+      <div id="message-screen" class="screen dialog-screen" hidden>
+        <p id="dialog-kicker" class="kicker">DAY COMPLETE</p>
+        <h2 id="dialog-title">Night survived.</h2>
+        <p id="dialog-copy"></p>
+        <div id="dialog-actions" class="dialog-actions"></div>
+      </div>
+
+      <div id="shop-screen" class="screen shop-screen" hidden>
+        <div class="shop-card">
+          <div class="shop-heading"><div><p class="kicker">ORPHANAGE ARMORY</p><h2>Prepare for day <span id="shop-day">2</span></h2></div><strong id="shop-money">$0</strong></div>
+          <div id="shop-grid" class="shop-grid"></div>
+          <button id="next-day-button" class="pixel-button danger" type="button">Start next day</button>
+        </div>
+      </div>
+
+      <div id="hud" class="hud" hidden>
+        <div><small>DAY</small><strong id="hud-day">1</strong></div>
+        <div><small>ORPHANAGE</small><span class="meter"><i id="base-meter"></i></span></div>
+        <div><small>SURVIVOR</small><span class="meter health"><i id="health-meter"></i></span></div>
+        <div class="hud-right"><small id="hud-weapon">PISTOL</small><strong id="hud-ammo">12 / 48</strong></div>
+      </div>
+
+      <div id="inventory" class="inventory" hidden>
+        <button type="button" data-weapon="pistol"><b>1</b><span>PISTOL</span></button>
+        <button type="button" data-weapon="shotgun"><b>2</b><span>SHOTGUN</span></button>
+        <button type="button" data-weapon="rifle"><b>3</b><span>RIFLE</span></button>
+        <button type="button" id="build-button"><b>4</b><span>FENCE</span></button>
+        <button type="button" id="bomb-button"><b>5</b><span>BOMB</span></button>
+      </div>
+
+      <div id="mobile-controls" class="mobile-controls" hidden>
+        <div><button data-hold="left">◀</button><button data-hold="right">▶</button></div>
+        <div><button data-action="melee">E</button><button data-action="kick">KICK</button><button class="fire" data-action="fire">FIRE</button></div>
+      </div>
+    </section>
+
+    <p class="desktop-hint"><b>MOVE</b> A/D or arrows · <b>SHOOT</b> mouse · <b>SWITCH</b> Q · <b>MELEE</b> E · <b>RELOAD</b> R · <b>KICK</b> Space</p>
+  </main>
+  <script type="module" src="undead-invasion.js"></script>
+</body>
+</html>
