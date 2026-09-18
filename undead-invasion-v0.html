@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#171e21">
+  <title>Undead Invasion · Alpine Arcade</title>
+  <link rel="stylesheet" href="undead-invasion-v0.css">
+</head>
+<body>
+  <main id="ui-game" aria-label="Undead Invasion zombie defense game">
+    <header class="ui-toolbar"><a class="ui-brand" href="index.html#undead-invasion-v0" id="ui-arcade"><span class="ui-mark" aria-hidden="true">✚</span> UNDEAD INVASION <span class="ui-edition">SURVIVAL / 01</span></a><div><button id="ui-sound" type="button" aria-pressed="false">SOUND OFF</button><button id="ui-pause-button" type="button" hidden>PAUSE <kbd>P</kbd></button></div></header>
+    <div id="ui-stage">
+      <canvas id="ui-canvas" width="1120" height="600" tabindex="0" aria-label="Side-view zombie defense. Arrow keys or WASD move, mouse aims and shoots, Q switches weapons, E uses a knife, R reloads, Space kicks, and G throws a grenade."></canvas>
+      <section id="ui-title" class="ui-screen ui-title-screen" aria-labelledby="ui-title-heading">
+        <div class="ui-title-copy"><h1 id="ui-title-heading">Undead Invasion</h1><div class="ui-mode-buttons"><button id="ui-start" class="ui-mode ui-defense" type="button">New Defense</button><button id="ui-playground" class="ui-mode ui-playground" type="button">Playground</button></div><p id="ui-best" class="ui-player-name">survivor<span>▰</span></p><p class="ui-mode-note">DEFENSE SAVES YOUR BEST DAY · PLAYGROUND UNLOCKS THE FULL ARSENAL</p></div>
+        <div class="ui-title-bottom"><span><kbd>← ↑ ↓ →</kbd> MOVE</span><span><kbd>MOUSE</kbd> ATTACK</span><span><kbd>Q</kbd> SWITCH</span><span><kbd>E</kbd> KNIFE</span><span><kbd>R</kbd> RELOAD</span><span><kbd>SPACE</kbd> KICK</span></div>
+      </section>
+      <div id="ui-hud" hidden>
+        <div class="ui-hud-top"><div class="ui-day"><span>HOLD THE OUTPOST</span><strong>DAY <b id="ui-day-number">01</b></strong></div><div class="ui-stats"><div><span>HOSTILES</span><b id="ui-hostiles">0</b></div><div><span>KILLS</span><b id="ui-kills">0</b></div><div><span>SUPPLIES</span><b id="ui-coins">$100</b></div></div></div>
+        <p id="ui-message" role="status" aria-live="polite"></p>
+        <div class="ui-hud-bottom"><div class="ui-health-box"><div><span>YOU <b id="ui-health">100</b></span><span>SHELTER <b id="ui-base">100</b></span></div><div class="ui-meter-row"><i><span id="ui-health-fill"></span></i><i><span id="ui-base-fill"></span></i></div></div><div class="ui-ammo"><span id="ui-weapon">SERVICE PISTOL</span><strong id="ui-ammo">12 <small>/ 12</small></strong><span id="ui-grenades">2 GRENADES · G</span></div></div>
+      </div>
+      <section id="ui-shop" class="ui-screen ui-modal" hidden role="dialog" aria-modal="true" aria-labelledby="ui-shop-title">
+        <div class="ui-shop-panel"><div class="ui-shop-heading"><div><p class="ui-kicker">A MOMENT TO BREATHE</p><h2 id="ui-shop-title">DAY SECURED.</h2><p id="ui-shop-copy">Rearm. Rebuild. Get ready for the next wave.</p></div><div class="ui-wallet"><span>AVAILABLE SUPPLIES</span><b id="ui-shop-coins">$100</b></div></div><div id="ui-shop-grid"></div><div class="ui-shop-footer"><p id="ui-shop-status" role="status">Weapons keep their upgrades for this run.</p><button id="ui-next-day" class="ui-primary" type="button">DEFEND DAY 02 <span>↗</span></button></div></div>
+      </section>
+      <section id="ui-pause" class="ui-screen ui-modal" hidden role="dialog" aria-modal="true" aria-labelledby="ui-pause-title"><div class="ui-dialog"><p class="ui-kicker">THE HORDE CAN WAIT</p><h2 id="ui-pause-title">TAKE A BREATHER.</h2><p>Your run is paused.</p><button id="ui-resume" class="ui-primary" type="button">BACK TO THE FIGHT <span>↗</span></button><button id="ui-quit" class="ui-secondary" type="button">RETURN TO TITLE</button></div></section>
+      <section id="ui-ending" class="ui-screen ui-modal" hidden role="dialog" aria-modal="true" aria-labelledby="ui-ending-title"><div class="ui-dialog"><p class="ui-kicker">END OF THE LINE</p><h2 id="ui-ending-title">OUTPOST LOST.</h2><p id="ui-ending-copy"></p><div class="ui-result"><div><span>DAY REACHED</span><b id="ui-result-day">01</b></div><div><span>UNDEAD STOPPED</span><b id="ui-result-kills">0</b></div></div><button id="ui-retry" class="ui-primary" type="button">ONE MORE RUN <span>↗</span></button><button id="ui-menu" class="ui-secondary" type="button">RETURN TO TITLE</button></div></section>
+      <div id="ui-touch" hidden aria-label="Touch controls"><div id="ui-stick" aria-label="Drag to move"><span></span><b>MOVE</b></div><div class="ui-touch-buttons"><button id="ui-touch-reload" type="button">RELOAD</button><button id="ui-touch-knife" type="button">KNIFE</button><button id="ui-touch-kick" type="button">KICK</button><button id="ui-touch-grenade" type="button">GRENADE</button><button id="ui-touch-fire" type="button">FIRE</button></div></div>
+      <noscript><p class="ui-no-script">Enable JavaScript to play Undead Invasion.</p></noscript>
+    </div>
+    <footer class="ui-footer"><span>DEFEND THE ORPHANAGE. SURVIVE THE DAY.</span><span class="ui-desktop-hint">ARROWS / WASD MOVE · MOUSE ATTACK · Q SWITCH · E KNIFE · R RELOAD · SPACE KICK · G GRENADE</span><span class="ui-mobile-hint">LEFT STICK TO MOVE · TOUCH THE ROAD TO AIM + FIRE</span></footer>
+  </main>
+  <script src="undead-invasion-v0-core.js"></script>
+  <script src="undead-invasion-v0-render.js"></script>
+  <script src="undead-invasion-v0.js"></script>
+</body>
+</html>
