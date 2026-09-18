@@ -8,6 +8,10 @@
   const ctx = canvas.getContext('2d', { alpha: false });
   const W = canvas.width, H = canvas.height, GROUND = 402;
   ctx.imageSmoothingEnabled = false;
+  // Preserve the fixed-size pixel look while avoiding unnecessary redraws on
+  // Chromebook-class integrated graphics.
+  const browserNavigator = typeof navigator === 'undefined' ? {} : navigator;
+  const lowPowerDevice = /CrOS/i.test(browserNavigator.userAgent || '') || (browserNavigator.deviceMemory && browserNavigator.deviceMemory <= 4) || (browserNavigator.hardwareConcurrency && browserNavigator.hardwareConcurrency <= 4);
 
   const ui = {
     menu: document.getElementById('main-menu'), dialog: document.getElementById('message-screen'),
@@ -131,7 +135,7 @@
   function explode(x,y) {
     shake=18; tone(48,.25,'sawtooth',.07);
     zombies.forEach(z=>{const d=Math.hypot(z.x-x,z.y-y);if(d<145)hurtZombie(z,Math.max(20,160-d),Math.sign(z.x-x)*10);});
-    for(let i=0;i<55;i++)particles.push({x,y,vx:rnd(-8,8),vy:rnd(-8,5),life:rnd(18,50),color:i%3?'#b94829':'#f0ad42',size:rnd(2,7),gravity:.2});
+    for(let i=0;i<(lowPowerDevice?28:55);i++)particles.push({x,y,vx:rnd(-8,8),vy:rnd(-8,5),life:rnd(18,50),color:i%3?'#b94829':'#f0ad42',size:rnd(2,7),gravity:.2});
   }
 
   function hurtZombie(z,damage,push=0) {
@@ -143,7 +147,7 @@
   function killZombie(z) {
     z.dead=true; const bounty=z.type==='brute'?45:z.type==='armored'?20:z.type==='runner'?13:10;
     money+=bounty;score+=bounty*10;kills++;corpses.push({x:z.x,y:z.y,type:z.type,flip:Math.random()<.5,life:650});
-    for(let i=0;i<10;i++)particles.push({x:z.x,y:z.y+8,vx:rnd(-4,4),vy:rnd(-5,1),life:rnd(18,45),color:i%3?'#7f1118':'#a99772',size:rnd(2,5),gravity:.18});
+    for(let i=0;i<(lowPowerDevice?6:10);i++)particles.push({x:z.x,y:z.y+8,vx:rnd(-4,4),vy:rnd(-5,1),life:rnd(18,45),color:i%3?'#7f1118':'#a99772',size:rnd(2,5),gravity:.18});
     updateHUD();
   }
 
@@ -261,10 +265,10 @@
 
   function drawBackground() {
     px(0,0,W,H,'#9bd0cc');px(0,55,W,95,'#5a8751');
-    for(let i=0;i<34;i++){const x=i*34+(i%3)*7,h=20+(i*17)%30;px(x,120-h,42,h,'#376b43');px(x+8,110-h,28,h,'#2e5f3c');}
-    px(0,150,W,116,'#779719');for(let i=0;i<90;i++)px((i*47)%W,156+(i*23)%103,2,9+(i%4)*3,i%2?'#657f17':'#8ca92b');
+    for(let i=0;i<(lowPowerDevice?20:34);i++){const x=i*34+(i%3)*7,h=20+(i*17)%30;px(x,120-h,42,h,'#376b43');px(x+8,110-h,28,h,'#2e5f3c');}
+    px(0,150,W,116,'#779719');for(let i=0;i<(lowPowerDevice?45:90);i++)px((i*47)%W,156+(i*23)%103,2,9+(i%4)*3,i%2?'#657f17':'#8ca92b');
     px(0,266,W,18,'#d7d3ad');px(0,284,W,119,'#30383a');px(0,292,W,4,'#485151');px(0,395,W,8,'#e2dfc5');px(0,403,W,H-403,'#4c4025');
-    for(let x=20;x<W;x+=76){px(x,342,50,5,'#e2d82c');px(x+8,451,5,5,'#b0a879');}for(let i=0;i<70;i++)px((i*83)%W,410+(i*37)%120,3+(i%4),2+(i%3),i%2?'#716341':'#342f20');
+    for(let x=20;x<W;x+=76){px(x,342,50,5,'#e2d82c');px(x+8,451,5,5,'#b0a879');}for(let i=0;i<(lowPowerDevice?35:70);i++)px((i*83)%W,410+(i*37)%120,3+(i%4),2+(i%3),i%2?'#716341':'#342f20');
     px(0,183,92,101,'#4b514c');px(8,196,70,88,'#6e6d61');px(20,211,22,28,'#182628');px(54,211,17,28,'#172426');px(13,242,68,7,'#3e3d37');px(23,253,48,31,'#312f2d');px(33,255,27,29,'#151b1b');
     ctx.fillStyle='#d7d0a8';ctx.font='bold 9px monospace';ctx.fillText('ORPHANAGE',12,191);px(88,253,7,150,'#575e55');px(95,272,16,131,'#3c433d');
     if(flash>0){ctx.fillStyle='#fff3';ctx.fillRect(0,0,W,H);flash--;}
@@ -295,7 +299,8 @@
     if(buildMode&&scene==='playing'){ctx.strokeStyle='#dbb455';ctx.lineWidth=2;ctx.strokeRect(clamp(pointer.x,235,W-85)-20,GROUND-48,40,48);ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.fillText('PLACE FENCE · $40',clamp(pointer.x-52,10,W-120),GROUND-57);}
   }
 
-  function loop(now) {const dt=Math.min(2.5,(now-last)/16.67||1);last=now;if(scene==='playing'){for(let i=0;i<Math.max(1,Math.round(dt));i++)update();}draw();requestAnimationFrame(loop);}
+  let lastDraw=0;
+  function loop(now) {const dt=Math.min(2.5,(now-last)/16.67||1);last=now;if(scene==='playing'){for(let i=0;i<Math.max(1,Math.round(dt));i++)update();}if(!lowPowerDevice||now-lastDraw>=1000/30){draw();lastDraw=now;}requestAnimationFrame(loop);}
   function canvasPoint(e) { const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}; }
   canvas.addEventListener('pointermove',e=>Object.assign(pointer,canvasPoint(e)));
   canvas.addEventListener('pointerdown',e=>{if(scene!=='playing')return;Object.assign(pointer,canvasPoint(e));if(buildMode){placeBarrier(pointer.x);return;}pointer.down=true;canvas.setPointerCapture?.(e.pointerId);fire();});
