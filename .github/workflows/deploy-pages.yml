@@ -19,31 +19,27 @@ jobs:
     steps:
       - name: Check out the site
         uses: actions/checkout@v4
-      - name: Prepare Chromebook-friendly game rendering
+      - name: Repair and save Chromebook-friendly game rendering
         run: |
           python - <<'PY'
           from pathlib import Path
           path = Path("index.html")
           source = path.read_text()
-          replacements = [
-            ("        function resizeCanvas() {", "        // Chromebooks usually have modest integrated graphics. Keep their simulation at\\n        // full speed, but lower the pixels and frame rate the renderer has to fill.\\n        const browserNavigator = typeof navigator === 'undefined' ? {} : navigator;\\n        const lowPowerDevice = /CrOS/i.test(browserNavigator.userAgent || '') || (browserNavigator.deviceMemory && browserNavigator.deviceMemory <= 4) || (browserNavigator.hardwareConcurrency && browserNavigator.hardwareConcurrency <= 4);\\n        function resizeCanvas() {"),
-            ("                const scale = Math.min(preferred, 1280 / w, Math.sqrt(900000 / (w * h)));", "                const pixelBudget = lowPowerDevice ? 540000 : 900000;\\n                const scale = Math.min(preferred, 1280 / w, Math.sqrt(pixelBudget / (w * h)));"),
-            ("            if (!lastRender || now - lastRender >= 1000 / 60 - 1) {", "            const renderInterval = lowPowerDevice ? 1000 / 30 : 1000 / 60;\\n            if (!lastRender || now - lastRender >= renderInterval - 1) {"),
-            ("            const range=1200;", "            // Fewer distant scene cells on low-power machines: the fog already hides\\n            // them, so this cuts city/desert geometry without changing the route.\\n            const range=lowPowerDevice?820:1200;"),
-            ("                const cell=145;", "                const cell=lowPowerDevice?210:145;"),
-            ("                const cell=230,neons=[['#ff4bc4','#65174f','#ff8add'],['#42e8ff','#14526b','#a5f7ff'],['#ffd258','#72551a','#fff0a0']];", "                const cell=lowPowerDevice?300:230,neons=[['#ff4bc4','#65174f','#ff8add'],['#42e8ff','#14526b','#a5f7ff'],['#ffd258','#72551a','#fff0a0']];"),
+          repairs = [
+            ["        // Chromebooks usually have modest integrated graphics. Keep their simulation at", "        // full speed, but lower the pixels and frame rate the renderer has to fill.", "        const browserNavigator = typeof navigator === 'undefined' ? {} : navigator;", "        const lowPowerDevice = /CrOS/i.test(browserNavigator.userAgent || '') || (browserNavigator.deviceMemory && browserNavigator.deviceMemory <= 4) || (browserNavigator.hardwareConcurrency && browserNavigator.hardwareConcurrency <= 4);", "        function resizeCanvas() {"],
+            ["                const pixelBudget = lowPowerDevice ? 540000 : 900000;", "                const scale = Math.min(preferred, 1280 / w, Math.sqrt(pixelBudget / (w * h)));"],
+            ["            const renderInterval = lowPowerDevice ? 1000 / 30 : 1000 / 60;", "            if (!lastRender || now - lastRender >= renderInterval - 1) {"],
+            ["            // Fewer distant scene cells on low-power machines: the fog already hides", "            // them, so this cuts city/desert geometry without changing the route.", "            const range=lowPowerDevice?820:1200;"],
           ]
-          for before, after in replacements:
-              source = source.replace(before, after, 1)
+          for lines in repairs:
+              source = source.replace(r"\\n".join(lines), "\\n".join(lines))
           path.write_text(source)
           PY
-      - name: Save optimized source
-        run: |
           if git diff --quiet -- index.html; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "Optimize city and desert rendering for Chromebooks"
+          git commit -m "Fix Chromebook rendering source formatting"
           git push
       - name: Configure Pages
         uses: actions/configure-pages@v5
