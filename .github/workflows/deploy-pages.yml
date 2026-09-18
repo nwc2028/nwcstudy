@@ -32,7 +32,7 @@ jobs:
             ["            // Fewer distant scene cells on low-power machines: the fog already hides", "            // them, so this cuts city/desert geometry without changing the route.", "            const range=lowPowerDevice?820:1200;"],
           ]
           for lines in repairs:
-              source = source.replace(r"\\n".join(lines), "\\n".join(lines))
+              source = source.replace(r"\n".join(lines), "\n".join(lines))
           path.write_text(source)
           PY
           if git diff --quiet -- index.html; then exit 0; fi
