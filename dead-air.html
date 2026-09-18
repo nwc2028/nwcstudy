@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0c0e0d">
+  <title>Dead Air · A survival horror game</title>
+  <link rel="stylesheet" href="dead-air.css">
+</head>
+<body>
+  <main id="da-game" aria-label="Dead Air survival horror">
+    <canvas id="da-canvas" tabindex="0" aria-label="First-person relay station. WASD moves, mouse or left/right arrows look, click or F punches, Space focuses your light, and E interacts."></canvas>
+    <div class="da-vignette" aria-hidden="true"></div>
+
+    <section id="da-menu" class="da-screen da-menu" aria-labelledby="da-title">
+      <div class="da-menu-top"><span class="da-brand"><span class="da-signal-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span> NORTH RIDGE RELAY STATION</span><span class="da-file">INCIDENT 094 / 02:17 AM</span></div>
+      <div class="da-menu-body">
+        <div class="da-title-block">
+          <p class="da-kicker"><span class="da-live-dot" aria-hidden="true"></span> NO SIGNAL. NO ONE COMING.</p>
+          <h1 id="da-title"><span>DEAD</span><span>AIR<span class="da-title-period">.</span></span></h1>
+          <p class="da-tagline">Face the dark. Fight your way out.</p>
+          <div class="da-frequency" aria-hidden="true"><span>FM 94.0</span><i></i><span>TRANSMISSION LOST</span></div>
+        </div>
+        <div class="da-briefing">
+          <div class="da-label"><span class="da-mini-line"></span> YOUR LAST SHIFT</div>
+          <h2 id="da-brief-title">Bring the power back.<br> Make it out alive.</h2>
+          <p id="da-story" class="da-story">The station went silent at 02:17. The doors locked. Then the footsteps started.</p>
+          <ol class="da-mission">
+            <li><span class="da-mission-number">01</span><div><strong id="da-step1-title">Restore three relays</strong><span id="da-step1-copy">Find the amber signals. Hold E / USE to repair.</span></div></li>
+            <li><span class="da-mission-number">02</span><div><strong id="da-step2-title">Fight it off</strong><span id="da-step2-copy">Click / F / PUNCH staggers it. Save your stamina.</span></div></li>
+            <li><span class="da-mission-number">03</span><div><strong id="da-step3-title">Return to the exit</strong><span id="da-step3-copy">Move quietly. Running tells it where you are.</span></div></li>
+          </ol>
+          <fieldset class="da-level-select"><legend>CHOOSE STARTING LEVEL</legend><button class="selected" data-level="1" aria-pressed="true" type="button"><b>01</b><span><strong>THE RELAY STATION</strong><small>Restore power · One listener</small></span></button><button data-level="2" aria-pressed="false" type="button"><b>02</b><span><strong>THE GLASS WARD</strong><small>Sequence puzzle · Breach windows</small></span></button></fieldset>
+          <button id="da-start" class="da-primary" type="button"><span>Enter the relay station</span><span aria-hidden="true">↗</span></button>
+          <div class="da-session-note"><span>ONE NIGHT. ONE WAY OUT.</span><span>A SHORT NIGHTMARE</span></div>
+          <p class="da-touch-note">Left stick moves. Drag the view to look.<br>PUNCH fights it off. FOCUS strengthens your light. USE repairs.</p>
+        </div>
+      </div>
+      <div class="da-menu-bottom">
+        <div class="da-controls"><span><kbd>WASD</kbd> Move</span><span><kbd>Mouse / ← →</kbd> Look</span><span><kbd>Click / F</kbd> Punch</span><span><kbd>Space</kbd> Focus beam</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>M</kbd> Map</span><span><kbd>Esc</kbd> Pause</span></div>
+        <div class="da-footer-row">
+          <p class="da-warning">Headphones recommended <span>·</span> Sudden scares &amp; tense audio</p>
+          <details class="da-settings">
+            <summary>Experience settings <span aria-hidden="true">+</span></summary>
+            <div class="da-settings-panel">
+              <label><input id="da-audio" type="checkbox" checked><span>Sound enabled</span></label>
+              <label><input id="da-reduced" type="checkbox"><span>Reduce motion &amp; flashes</span></label>
+              <label class="da-volume-label" for="da-volume">Volume<input id="da-volume" type="range" min="0" max="100" value="55"></label>
+              <p>Beam charge recovers when you release focus. Stamina recovers when you stop sprinting.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <div id="da-hud" hidden aria-label="Game status">
+      <div class="da-hud-top">
+        <div class="da-objective-box"><div class="da-label"><span id="da-count-label">RELAYS ONLINE</span> <strong id="da-count">0 / 3</strong></div><div id="da-objective">Restore power to the station.</div></div>
+        <div class="da-hud-actions"><span id="da-clock" aria-label="Elapsed time">00:00</span><button id="da-map-button" class="da-icon-button" type="button" aria-label="Open station map">MAP <kbd>M</kbd></button><button id="da-sound" class="da-icon-button" type="button" aria-label="Mute sound" aria-pressed="false">SOUND ON</button><button id="da-pause-button" class="da-icon-button" type="button" aria-label="Pause game">Ⅱ</button></div>
+      </div>
+      <div class="da-hud-bottom">
+        <div class="da-meters"><div class="da-meter"><div><span>BEAM CHARGE</span><kbd>SPACE</kbd></div><div class="da-meter-track"><span id="da-battery"></span></div></div><div class="da-meter da-stamina-meter"><div><span>STAMINA</span><kbd>SHIFT</kbd></div><div class="da-meter-track"><span id="da-stamina"></span></div></div></div>
+        <div class="da-threat-box"><span class="da-label">VITALS <b id="da-health">100%</b> · <b id="da-fists">FISTS · CLICK / F</b></span><strong id="da-threat">NO MOVEMENT</strong></div>
+      </div>
+    </div>
+    <div id="da-prompt" hidden role="status"><span class="da-prompt-copy" data-prompt-label>Hold E to restore relay</span><div class="da-progress-track"><span id="da-progress"></span></div></div>
+    <div id="da-caption" hidden aria-live="polite"></div>
+
+    <section id="da-pause" class="da-screen da-modal" hidden aria-labelledby="da-pause-title" role="dialog" aria-modal="true">
+      <div class="da-modal-card"><div class="da-label">TRANSMISSION SUSPENDED</div><h2 id="da-pause-title">Hold your breath.</h2><p>You're safe here. Take a moment.</p><div class="da-modal-buttons"><button id="da-resume" class="da-primary" type="button">Resume the night <span aria-hidden="true">↗</span></button><button id="da-restart" class="da-secondary" type="button">Restart run</button><button id="da-quit" class="da-text-button" type="button">Return to title</button></div><div class="da-pause-tip">Focus your beam to push it back.<br>Release it to recharge. Keep an escape route.</div></div>
+    </section>
+
+    <section id="da-ending" class="da-screen da-modal" hidden aria-labelledby="da-ending-title" role="dialog" aria-modal="true">
+      <div class="da-modal-card"><div class="da-label">END OF TRANSMISSION</div><h2 id="da-ending-title">Signal lost.</h2><p id="da-ending-copy">The station is quiet again.</p><div id="da-ending-stats" class="da-ending-stats"></div><div class="da-modal-buttons"><button id="da-retry" class="da-primary" type="button">Try again <span aria-hidden="true">↗</span></button><button id="da-end-menu" class="da-text-button" type="button">Return to title</button></div></div>
+    </section>
+
+    <section id="da-map" class="da-screen da-modal" hidden aria-labelledby="da-map-title" role="dialog" aria-modal="true">
+      <div class="da-map-panel"><div class="da-map-heading"><div><div id="da-map-kicker" class="da-label">NORTH RIDGE / SUBLEVEL 01</div><h2 id="da-map-title">Station schematic</h2></div><button id="da-map-close" class="da-icon-button" type="button" aria-label="Close station map">CLOSE <kbd>M</kbd></button></div><canvas id="da-map-canvas" width="740" height="520" aria-label="Map showing your location, objectives, hazards, and exit"></canvas><div class="da-map-legend"><span><i class="da-map-player"></i> YOU</span><span><i class="da-map-relay"></i> <b id="da-map-objective-label">RELAY</b></span><span><i class="da-map-exit"></i> EXIT</span><span id="da-map-window-legend" hidden><i class="da-map-window"></i> BREACH WINDOW</span><span class="da-map-note">THE BUILDING WAITS WHILE YOU LOOK.</span></div></div>
+    </section>
+
+    <div id="da-touch" hidden aria-label="Touch controls">
+      <div id="da-stick" role="group" aria-label="Drag to move and aim"><span id="da-stick-knob"></span><span class="da-stick-label">MOVE</span></div>
+      <div class="da-touch-actions"><button id="da-run" type="button">SPRINT</button><button id="da-focus" type="button">FOCUS</button><button id="da-use" type="button">USE</button><button id="da-punch" type="button">PUNCH</button></div>
+    </div>
+    <noscript><div class="da-no-script">Enable JavaScript to play Dead Air.</div></noscript>
+  </main>
+  <script src="dead-air-render.js"></script>
+  <script src="dead-air-fp.js"></script>
+  <script src="dead-air.js"></script>
+</body>
+</html>
