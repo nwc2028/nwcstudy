@@ -52,6 +52,15 @@ jobs:
           ]
           for lines in repairs:
               source = source.replace(r"\n".join(lines), "\n".join(lines))
+          source = source.replace("#web-undead-frame { position:absolute; inset:0; z-index:51; width:100%; height:100%; border:0; background:#050606; }\n#game-container.is-web-undead > :not(#web-undead-frame) { display:none!important; }\n#web-undead-frame[hidden] { display:none!important; }\n", "")
+          source = source.replace("            <button class=\"game-tab\" type=\"button\" onclick=\"event.stopImmediatePropagation(); showWebUndeadGame(this)\">Undead Invasion Online</button>\n", "")
+          source = source.replace("            <iframe id=\"web-undead-frame\" src=\"https://www.undead-invasion.com/\" title=\"Undead Invasion Online\" allow=\"fullscreen; autoplay\" referrerpolicy=\"strict-origin-when-cross-origin\" hidden></iframe>\n", "")
+          source = source.replace("const webUndeadFrame=document.getElementById('web-undead-frame');\n", "")
+          source = source.replace("    closeWebUndeadGame();\n", "")
+          source = source.replace("window.showWebUndeadGame=function(button){\n    isPlaying=false;paused=false;cancelAnimationFrame(animationId);clearKeys();\n    if(typeof raidFiring!=='undefined')raidFiring=false;\n    closeUndeadGame();\n    document.querySelectorAll('.game-tab').forEach(tab=>tab.classList.toggle('active',tab===button));\n    currentGame='web-undead';arcadeGameContainer.classList.remove('is-zombies');arcadeGameContainer.classList.add('is-web-undead');\n    webUndeadFrame.hidden=false;document.title='Undead Invasion Online · Alpine Arcade';\n};\n", "")
+          source = source.replace("function closeWebUndeadGame(){\n    if(!arcadeGameContainer.classList.contains('is-web-undead'))return;\n    arcadeGameContainer.classList.remove('is-web-undead');webUndeadFrame.hidden=true;\n}\n", "")
+          source = source.replace("document.querySelectorAll('.game-tab[data-game]').forEach(tab=>tab.addEventListener('click',()=>{closeUndeadGame();closeWebUndeadGame();}));", "document.querySelectorAll('.game-tab[data-game]').forEach(tab=>tab.addEventListener('click',closeUndeadGame));")
+          source = source.replace("document.getElementById('btn-exit-arcade').addEventListener('click',()=>{closeUndeadGame();closeWebUndeadGame();});", "document.getElementById('btn-exit-arcade').addEventListener('click',closeUndeadGame);")
           path.write_text(source)
           PY
           if git diff --quiet; then exit 0; fi
