@@ -1,6 +1,0 @@
-# Starts the one-time optimized site-shell update.
-MethodInvocationException: 
-Line |
-   2 |  [Console]::Out.Write([IO.File]::ReadAllText('.github/workflows/apply- …
-     |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     | Exception calling "ReadAllText" with "1" argument(s): "Could not find file 'C:\Users\nhara\Downloads\website\.github\workflows\apply-chromebook-optimization.yml'."
