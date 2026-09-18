@@ -24,8 +24,6 @@ jobs:
           if [ -f .github/patches/mutant-raid-support.patch ]; then
             git rm .github/patches/mutant-raid-support.patch
           fi
-      - name: Restore the known-good game source
-        run: git fetch --depth=1 origin f4d80de4aac33c5908b39036ed13b88e6df36fcd && git checkout f4d80de4aac33c5908b39036ed13b88e6df36fcd -- index.html
       - name: Repair and save Chromebook-friendly game rendering
         run: |
           python - <<'PY'
