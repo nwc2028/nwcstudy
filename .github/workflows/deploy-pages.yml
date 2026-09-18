@@ -30,8 +30,8 @@ jobs:
           from pathlib import Path
           path = Path("index.html")
           source = path.read_text()
-          source = source.replace("const wall=zmBuildings.some(ob=>rectIntersect(b.x,b.y,b.r,ob));", "const wall=zmBuildings.some(ob=>ob.kind=='building' and rectIntersect(b.x,b.y,b.r,ob));").replace(" and ", "&&")
-          source = source.replace("zmBuildings.some(ob=>rectIntersect(b.x,b.y,2,ob))", "zmBuildings.some(ob=>ob.kind=='building' and rectIntersect(b.x,b.y,2,ob))").replace(" and ", "&&")
+          source = source.replace("const wall=zmBuildings.some(ob=>rectIntersect(b.x,b.y,b.r,ob));", "const wall=zmBuildings.some(ob=>ob.kind==='building'&&rectIntersect(b.x,b.y,b.r,ob));")
+          source = source.replace("zmBuildings.some(ob=>rectIntersect(b.x,b.y,2,ob))", "zmBuildings.some(ob=>ob.kind==='building'&&rectIntersect(b.x,b.y,2,ob))")
           nl = chr(10)
           source = source.replace("#undead-game-frame[hidden] { display:none!important; }", nl.join(["#undead-game-frame[hidden] { display:none!important; }", "#web-undead-frame { position:absolute; inset:0; z-index:51; width:100%; height:100%; border:0; background:#050606; }", "#game-container.is-web-undead > :not(#web-undead-frame) { display:none!important; }", "#web-undead-frame[hidden] { display:none!important; }"]))
           source = source.replace('            <button class="game-tab" type="button" onclick="event.stopImmediatePropagation(); showUndeadGame(this)">Undead Invasion</button>', nl.join(['            <button class="game-tab" type="button" onclick="event.stopImmediatePropagation(); showUndeadGame(this)">Undead Invasion</button>', '            <button class="game-tab" type="button" onclick="event.stopImmediatePropagation(); showWebUndeadGame(this)">Undead Invasion Online</button>']))
