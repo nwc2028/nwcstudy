@@ -7,7 +7,20 @@
   const portal = document.getElementById('arcade-portal');
   const exit = document.getElementById('btn-exit-arcade');
   if (!header || !host || !portal || !exit) return;
+  const standaloneGame = new URLSearchParams(location.search).get('standalone-game');
+  if (standaloneGame) {
+    header.hidden = true;
+    portal.style.height = '100dvh';
+    host.style.minHeight = '0';
+    return;
+  }
+  const nativeDriftTab = header.querySelector('[data-game="drift"]');
+  const nativeRaidTab = header.querySelector('[data-game="zombies"]');
+  if (nativeDriftTab) nativeDriftTab.hidden = true;
+  if (nativeRaidTab) nativeRaidTab.hidden = true;
   const games = [
+    { id: 'mountain-pass', hash: '#drift', name: '↟ Mountain Pass', description: 'Mountain Pass drift game', src: 'index.html?standalone-game=drift#drift', background: '#142a26' },
+    { id: 'mutant-raid', hash: '#raid', name: 'Mutant Raid', description: 'Mutant Raid survival game', src: 'index.html?standalone-game=raid#raid', background: '#172727' },
     { id: 'undead-invasion-v0', name: 'Undead Invasion V0', description: 'Undead Invasion V0', src: 'undead-invasion-v0.html', menuMessage: 'undead-invasion-v0-menu', background: '#121713' },
     { id: 'dead-air', name: 'Dead Air', description: 'Dead Air survival horror', src: 'dead-air.html', menuMessage: 'dead-air-menu', background: '#0a0d0b' }
   ];
@@ -20,7 +33,7 @@
     button.setAttribute('aria-label', game.description);
     header.insertBefore(button, exit);
     game.button = button;
-    game.hash = '#' + game.id;
+    game.hash = game.hash || '#' + game.id;
     button.addEventListener('click', () => open(game));
   }
 
@@ -49,7 +62,6 @@
     host.style.display = '';
     previous.game.button.classList.remove('active');
     // The secret entrance reopens currentGame; keep its selected tab in sync.
-    nativeTab()?.classList.add('active');
     if (clearHash && location.hash === previous.game.hash) {
       history.replaceState(null, '', location.pathname + location.search);
     }
@@ -99,7 +111,7 @@
   window.addEventListener('message', event => {
     if (!active || event.source !== active.frame.contentWindow || event.data !== active.game.menuMessage) return;
     close();
-    document.querySelector('[data-game="drift"]').click();
+    games[0].button.click();
   });
   function route() {
     const game = games.find(candidate => candidate.hash === location.hash);
@@ -114,3 +126,4 @@
   window.addEventListener('hashchange', route);
   route();
 })();
+
