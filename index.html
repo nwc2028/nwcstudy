@@ -387,6 +387,7 @@ body { background:#edf0e9; } #home-view { padding:clamp(24px,6vw,80px) 28px; ove
                 arcadePortal.style.display = 'flex'; document.title = "Mountain Pass · Alpine Arcade"; 
                 resizeCanvas();
                 updateSidebarUI(currentGame);
+                if (!new URLSearchParams(location.search).has('standalone-game')) location.hash = '#drift';
             }
         });
         document.getElementById('btn-exit-arcade').addEventListener('click', () => {
